@@ -59,16 +59,6 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"⚠ {user_data['role'].capitalize()} user already exists: {user_data['email']}"))
 
 
-
-
-
-
-
-
-
-
-
-
 class IsMainAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == UserRoles.SUPER_ADMIN
