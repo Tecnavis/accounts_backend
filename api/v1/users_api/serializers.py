@@ -9,6 +9,17 @@ from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
 
 
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['email', 'username','contact_number', 'employee_id',  'is_staff']
+        extra_kwargs = {'is_staff': {'read_only': True}}
+
+    def create(self, validated_data):
+        validated_data['is_staff'] = True  # Ensuring the user is marked as staff
+        return CustomUser.objects.create_user(**validated_data)
+    
+
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)

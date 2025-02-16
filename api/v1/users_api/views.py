@@ -6,13 +6,14 @@ from users.models import CustomUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import permission_classes
-from .serializers import LoginSerializer, UserListSerializer
+from .serializers import LoginSerializer, UserListSerializer,CustomUserSerializer
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.admin.views.decorators import staff_member_required as admin_required
 
 import logging
 logger = logging.getLogger(__name__)
+from main.management.commands.create_roles_and_permissions import IsMainAdmin
 
 
 # @api_view(['POST'])
@@ -70,7 +71,6 @@ def create_admin(request):
     return render(request, 'create_admin.html')  
 
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_user(request):
@@ -103,4 +103,48 @@ def get_user_profile(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-     
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_staff_user(request):
+    serializer = CustomUserSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        serializer.save(is_staff=True)  # Ensuring the user is marked as staff
+        return Response({"message": "Staff user created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# list staff users
+@api_view(['GET'])
+@permission_classes([IsMainAdmin])  # Only main admin can view staff users
+def list_staff_users(request):
+    staff_users = CustomUser.objects.filter(is_staff=True)
+    serializer = UserListSerializer(staff_users, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# update staff user
+@api_view(['PUT'])
+@permission_classes([IsMainAdmin])  # Only main admin can update staff users
+def update_staff_user(request, pk):
+    try:
+        staff_user = CustomUser.objects.get(pk=pk)
+    except CustomUser.DoesNotExist:
+        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = CustomUserSerializer(staff_user, data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# delete staff user
+@api_view(['DELETE'])
+@permission_classes([IsMainAdmin])  # Only main admin can delete staff users
+def delete_staff_user(request, pk):
+    try:
+        staff_user = CustomUser.objects.get(pk=pk)
+    except CustomUser.DoesNotExist:
+        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    staff_user.delete()
+    return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)

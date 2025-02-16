@@ -12,5 +12,10 @@ urlpatterns = [
     path('login/', views.login_user, name='login'),
     path('auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('users/',views.get_user_profile,name='user_list'),
+    path('staffs/', views.list_staff_users, name='list_staff_users'),
+    path('staffs/<int:pk>/', views.update_staff_user, name='update_staff_user'),
+    path('staffs/<int:pk>/delete/', views.delete_staff_user, name='delete_staff_user'),
+    # create_staff_user
+    path('staffs/create/', views.create_staff_user, name='create_staff_user'),
    
 ]

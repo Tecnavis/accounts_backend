@@ -9,10 +9,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = False
+DEBUG = True
 
+# ALLOWED_HOSTS = ['13.126.77.40', 'https://api.neo.tecnavis.com','127.0.0.1']
 ALLOWED_HOSTS = ['13.126.77.40', 'https://api.neo.tecnavis.com']
-
 
 INSTALLED_APPS = [
     'corsheaders', 
@@ -65,6 +65,9 @@ WSGI_APPLICATION = 'accounts_management.wsgi.application'
 
 DATABASES = {
     'default': {
+
+        # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
+
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
@@ -74,17 +77,7 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',
-#         'USER': 'postgres',
-#         'PASSWORD': '965601',
-#         # 'HOST': 'your-rds-endpoint.region.rds.amazonaws.com',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
+
 
 # DATABASES = {
 #     'default': {
