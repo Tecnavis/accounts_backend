@@ -16,6 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
+from django.http import HttpResponse
+
+def home(request):
+    return HttpResponse("Welcome to Accounts Management")
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,5 +30,6 @@ urlpatterns = [
     path('api/v1/users/', include(('api.v1.users_api.urls'),namespace='users_api')) , 
     path('api/v1/dashboard/', include(('api.v1.dashboard_api.urls'),namespace='dashboard_api')) , 
     path('api/v1/financials/', include(('api.v1.financials_api.urls'),namespace='financials_api')),
+    path('',home,name='home'),
 
 ]
