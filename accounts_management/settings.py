@@ -12,7 +12,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 
 # ALLOWED_HOSTS = ['13.126.77.40', 'https://api.neo.tecnavis.com','127.0.0.1']
-ALLOWED_HOSTS = ['13.126.77.40', 'https://api.neo.tecnavis.com']
+
+ALLOWED_HOSTS = ['13.126.77.40', 'api.neo.tecnavis.com',]
 
 INSTALLED_APPS = [
     'corsheaders', 
@@ -65,8 +66,6 @@ WSGI_APPLICATION = 'accounts_management.wsgi.application'
 
 DATABASES = {
     'default': {
-
-        # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
 
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME'),
@@ -154,10 +153,10 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,  # Recommended to add this
-    "BLACKLIST_AFTER_ROTATION": True,  # Recommended to add this
-    "UPDATE_LAST_LOGIN": True,  # Useful for tracking user login times
-    "AUTH_HEADER_TYPES": ("Bearer",),  # Defines what prefix to use in Authorization header
+    "ROTATE_REFRESH_TOKENS": True, 
+    "BLACKLIST_AFTER_ROTATION": True,  
+    "UPDATE_LAST_LOGIN": True, 
+    "AUTH_HEADER_TYPES": ("Bearer",),  
 }
 
 AUTH_USER_MODEL = 'users.CustomUser'
