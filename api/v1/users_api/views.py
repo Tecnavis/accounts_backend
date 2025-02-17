@@ -98,6 +98,7 @@ def login_user(request):
     
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_user_profile(request):
     user = request.user
     serializer = UserListSerializer(user)
