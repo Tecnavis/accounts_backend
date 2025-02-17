@@ -9,11 +9,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS = ['13.126.77.40', 'https://api.neo.tecnavis.com','127.0.0.1']
 
-ALLOWED_HOSTS = ['13.126.77.40', 'api.neo.tecnavis.com',]
+ALLOWED_HOSTS = ['13.126.77.40', 'api.neo.tecnavis.com','localhost','127.0.0.1']
 
 INSTALLED_APPS = [
     'corsheaders', 
