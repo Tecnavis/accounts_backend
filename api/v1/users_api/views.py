@@ -81,6 +81,7 @@ def login_user(request):
     try:
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
+        print(user,"user")
         refresh = RefreshToken.for_user(user)
         response_data = {
             'detail': 'Login successful',

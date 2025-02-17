@@ -23,9 +23,7 @@ def home(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('api/v1/customers/', include(('api.v1.customers_api.urls'),namespace='customers_api')),
-    # path('api/v1/main_admin/', include(('api.v1.main_admin_api.urls'),namespace='main_admin_api')),
-    # path('api/v1/reports/', include(('api.v1.reports_api.urls'),namespace='reports_api')),
+    
     path('api/v1/services/', include(('api.v1.services_api.urls'),namespace='services_api')),
     path('api/v1/users/', include(('api.v1.users_api.urls'),namespace='users_api')) , 
     path('api/v1/dashboard/', include(('api.v1.dashboard_api.urls'),namespace='dashboard_api')) , 
