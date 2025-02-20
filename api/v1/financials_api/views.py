@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from financials.models import Transaction,TransactionPayment
+from services.models import Service, Category
 from .serializers import TransactionSerializer, TransactionPaymentSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +10,11 @@ from rest_framework.decorators import permission_classes
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+import pandas as pd
+import datetime
+import io
+from django.utils.dateparse import parse_date
+
 
 
 @api_view(['GET'])
@@ -16,7 +22,7 @@ from django.shortcuts import get_object_or_404
 def transaction_list(request):
     transactions = Transaction.objects.all()
     serializer = TransactionSerializer(transactions, many=True)
-    print(serializer.data,".......") 
+ 
     return Response(serializer.data)
 
 
@@ -30,24 +36,58 @@ def transaction_detail(request, id):
     serializer = TransactionSerializer(transaction)
     return Response(serializer.data)
 
-
 @api_view(['POST'])
-@permission_classes([AllowAny]) 
+@permission_classes([IsAuthenticated])
 def create_transaction(request):
-    print(request.data)
+    print(request.data, "requested data")
+    print(request.user.id, "requested user")
+   
     transaction_type = request.data.get("transaction_type")
-
     if transaction_type not in ["sale", "purchase"]:
         return Response({"detail": "Invalid transaction type."}, status=status.HTTP_400_BAD_REQUEST)
-
-    transaction_serializer = TransactionSerializer(data=request.data)
    
-
+    data = request.data.copy()
+    data["created_by"] = request.user.id
+    transaction_serializer = TransactionSerializer(data=data)  # Make sure you're using the updated data
+   
     if transaction_serializer.is_valid():
-        transaction_serializer.save()
+        transaction = transaction_serializer.save()
+        print(f"Transaction saved with ID: {transaction.id}")
+        # Verify it exists in the database
+        try:
+            db_check = Transaction.objects.get(id=transaction.id)
+            print(f"Verified transaction exists in DB: {db_check.id}")
+        except Transaction.DoesNotExist:
+            print("ERROR: Transaction not found in database after save!")
         return Response(transaction_serializer.data, status=status.HTTP_201_CREATED)
-    print(transaction_serializer.errors) 
+ 
     return Response(transaction_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# @api_view(['POST'])
+# @permission_classes([AllowAny]) 
+# def create_transaction(request):
+#     print(request.data,"requested data")
+    
+#     # user_id = request.user.id if request.user.is_authenticated else None
+#     # print(user_id, "requested user")
+
+    
+#     transaction_type = request.data.get("transaction_type")
+
+#     if transaction_type not in ["sale", "purchase"]:
+#         return Response({"detail": "Invalid transaction type."}, status=status.HTTP_400_BAD_REQUEST)
+   
+#     data = request.data.copy()
+#     data["created_by"] = request.user.id
+
+#     transaction_serializer = TransactionSerializer(data=request.data)
+   
+#     if transaction_serializer.is_valid():
+#         transaction_serializer.save()
+#         return Response(transaction_serializer.data, status=status.HTTP_201_CREATED)
+ 
+#     return Response(transaction_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['PUT'])
@@ -104,7 +144,7 @@ def create_payment(request):
             serializer = TransactionPaymentSerializer(data={**request.data, 'transaction': transaction_instance.id})
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            print(serializer.data,".hi payment")
+            
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
     
@@ -134,7 +174,6 @@ def create_transaction_payment(request, id):  # Accepts ID directly
 
         serializer.save()
         transaction.update_payment_status()
-        print(serializer.data),"hi payment"
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -169,5 +208,146 @@ def calculate_service_amount(request):
 
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def import_excel(request):
+    
+    if "excel_file" not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    excel_file = request.FILES["excel_file"]
+
+    try:
+        df = pd.read_excel(io.BytesIO(excel_file.read()))
+
+        transactions_data = []
+        errors = []
+
+        for index, row in df.iterrows():
+            service_name = row.get("service_name")  
+            if not service_name:
+                errors.append(f"Row {index + 1}: Missing service_name")
+                continue  
+
+            
+            service = Service.objects.filter(name=service_name).first()
+            if not service:
+                errors.append(f"Row {index + 1}: Service '{service_name}' not found")
+                continue  
+
+            sale_date = row.get("sale_date", None)
+            if sale_date:
+                if isinstance(sale_date, str):
+                    sale_date = parse_date(sale_date)  
+                elif not isinstance(sale_date, datetime.date):
+                    sale_date = datetime.date.today()
+            else:
+                sale_date = datetime.date.today()
+
+           
+            transaction_data = {
+                "total_service_amount": row.get("price", 0),
+                "remaining_amount": row.get("remaining_amount", 0),
+                "transaction_id": row.get("transaction_id"),
+                "billing_address": row.get("billing_address"),
+                "service": service.id,  
+                "quantity": row.get("quantity", 1),
+                "payment_status": row.get("payment_status", "unpaid"),
+                "transaction_type": row.get("transaction_type"),
+                "sale_date": sale_date,
+                "remarks": row.get("remarks"),
+                "country": row.get("country", "saudi"),
+                "username": row.get("username"),
+                "email": row.get("email"),
+                "contact_number": row.get("contact_number"),
+                "vat_type": row.get("vat_type", "standard"),
+                "vat_rate": row.get("vat_rate", 15),
+                "vat_amount": row.get("vat_amount", 0),
+            }
+
+            transactions_data.append(transaction_data)
+
+        
+        serializer = TransactionSerializer(data=transactions_data, many=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Transactions imported successfully", "count": len(transactions_data)}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def import_excel(request):
+#     if "excel_file" not in request.FILES:
+#         return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+#     excel_file = request.FILES["excel_file"]
+
+#     try:
+#         df = pd.read_excel(io.BytesIO(excel_file.read()))
+#         transactions_data = []
+#         errors = []
+
+#         for index, row in df.iterrows():
+#             service_name = row.get("service_name")
+#             if not service_name:
+#                 errors.append(f"Row {index + 1}: Missing service_name")
+#                 continue  
+
+#             service = Service.objects.filter(name=service_name).first()
+#             if not service:
+#                 errors.append(f"Row {index + 1}: Service '{service_name}' not found")
+#                 continue  
+
+#             sale_date = row.get("sale_date", None)
+#             if sale_date:
+#                 if isinstance(sale_date, str):
+#                     sale_date = parse_date(sale_date)  
+#                 elif not isinstance(sale_date, datetime.date):
+#                     sale_date = datetime.date.today()
+#             else:
+#                 sale_date = datetime.date.today()
+
+#             transaction_data = {
+#                 "total_service_amount": row.get("price", 0),
+#                 "remaining_amount": row.get("remaining_amount", 0),
+#                 "transaction_id": row.get("transaction_id"),
+#                 "billing_address": row.get("billing_address"),
+#                 "service": service.id,
+#                 "quantity": row.get("quantity", 1),
+#                 "payment_status": row.get("payment_status", "unpaid"),
+#                 "transaction_type": row.get("transaction_type"),
+#                 "sale_date": sale_date,
+#                 "remarks": row.get("remarks"),
+#                 "country": row.get("country", "saudi"),
+#                 "username": row.get("username"),
+#                 "email": row.get("email"),
+#                 "contact_number": row.get("contact_number"),
+#                 "vat_type": row.get("vat_type", "standard"),
+#                 "vat_rate": row.get("vat_rate", 15),
+#                 "vat_amount": row.get("vat_amount", 0),
+#             }
+
+#             print(f"Processing Row {index + 1}: {transaction_data}")  # Debugging print
+#             transactions_data.append(transaction_data)
+
+#         if not transactions_data:
+#             return Response({"error": "No valid transactions found.", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#         serializer = TransactionSerializer(data=transactions_data, many=True)
+
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({"message": "Transactions imported successfully", "count": len(transactions_data)}, status=status.HTTP_201_CREATED)
+#         else:
+#             print("Serializer Errors:", serializer.errors)  # Debugging print
+#             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

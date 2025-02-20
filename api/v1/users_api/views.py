@@ -10,6 +10,9 @@ from .serializers import LoginSerializer, UserListSerializer,CustomUserSerialize
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.admin.views.decorators import staff_member_required as admin_required
+from main.management.commands.create_roles_and_permissions import IsMainAdmin,IsSecondaryAdmin,IsStaff
+
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -58,18 +61,6 @@ from main.management.commands.create_roles_and_permissions import IsMainAdmin
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@admin_required  # Only existing admins can create new admins
-def create_admin(request):
-    if request.method == 'POST':
-        # Form validation and admin creation logic
-        new_admin = CustomUser.objects.create_admin(
-            email=request.POST['email'],
-            username=request.POST['username'],
-            password=request.POST['password']
-        )
-        return redirect('admin_list')
-    return render(request, 'create_admin.html')  
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -105,20 +96,58 @@ def get_user_profile(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
+def get_user_profile_by_id(request, id):
+    try:
+        user = CustomUser.objects.get(id=id)
+    except CustomUser.DoesNotExist:
+        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = UserListSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def create_staff_user(request):
+#     serializer = CustomUserSerializer(data=request.data)
+    
+#     if serializer.is_valid():
+#         serializer.save(is_staff=True)  # Ensuring the user is marked as staff
+#         return Response({"message": "Staff user created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+    
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsSecondaryAdmin]) 
 def create_staff_user(request):
+    print("Authorization Header:", request.headers.get("Authorization"))  # Debugging
+
     serializer = CustomUserSerializer(data=request.data)
     
     if serializer.is_valid():
-        serializer.save(is_staff=True)  # Ensuring the user is marked as staff
-        return Response({"message": "Staff user created successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+        password = serializer.validated_data.pop('password', None)  
+        user = serializer.save(is_staff=True)
+        
+        if password:
+            user.set_password(password)  
+            user.save()
+        
+        return Response(
+            {"message": "Staff user created successfully"},
+            status=status.HTTP_201_CREATED
+        )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# list staff users
+
+
+
 @api_view(['GET'])
-@permission_classes([IsMainAdmin])  # Only main admin can view staff users
+@permission_classes([AllowAny])
 def list_staff_users(request):
     staff_users = CustomUser.objects.filter(is_staff=True)
     serializer = UserListSerializer(staff_users, many=True)
@@ -126,7 +155,7 @@ def list_staff_users(request):
 
 # update staff user
 @api_view(['PUT'])
-@permission_classes([IsMainAdmin])  # Only main admin can update staff users
+@permission_classes([IsMainAdmin])  
 def update_staff_user(request, pk):
     try:
         staff_user = CustomUser.objects.get(pk=pk)
@@ -141,7 +170,7 @@ def update_staff_user(request, pk):
 
 # delete staff user
 @api_view(['DELETE'])
-@permission_classes([IsMainAdmin])  # Only main admin can delete staff users
+@permission_classes([IsMainAdmin])  
 def delete_staff_user(request, pk):
     try:
         staff_user = CustomUser.objects.get(pk=pk)

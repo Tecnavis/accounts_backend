@@ -1,6 +1,7 @@
 import datetime
 from django.db import models
 from services.models import Service
+from users.models import CustomUser
 
 
 import logging
@@ -32,6 +33,7 @@ class Transaction(models.Model):
         ("exempt", "Exempt VAT (No VAT applied)"),
     )
     
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='transactions_created', blank=True, null=True)
     total_service_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     remaining_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)  
     transaction_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
@@ -44,15 +46,14 @@ class Transaction(models.Model):
     remarks = models.TextField(blank=True, null=True)
     country = models.CharField(max_length=10, choices=COUNTRY_CHOICES, default="saudi")
 
-    # Customer/vendor Fields
     username = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     contact_number = models.CharField(max_length=15, blank=True, null=True)
 
-    # VAT Field (Only for Saudi Arabia)
     vat_type = models.CharField(max_length=20, choices=VAT_CHOICES)
     vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15)  
     vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+
 
     def save(self, *args, **kwargs):
 

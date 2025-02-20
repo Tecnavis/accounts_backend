@@ -16,5 +16,6 @@ urlpatterns = [
     path('categories/<int:category_id>/services/', views.service_list, name='service_list'),  # List services in a category
     path('categories/<int:category_id>/services/create/', views.create_service, name='create_service'),  # Create a service in a category
     path('categories/<int:category_id>/services/<int:service_id>/update/', views.update_service, name='update_service'),  # Update a service in a category
-    path('categories/<int:category_id>/services/<int:service_id>/delete/', views.delete_service, name='delete_service'),  # Delete a service in a category
+    path('services/<int:service_id>/delete/', views.delete_service, name='delete_service'),  
+    
 ]

@@ -60,16 +60,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
-    # class Meta:
-    #     db_table = 'user_user'
-    #     verbose_name = _('user')
-    #     verbose_name_plural = _('users')
-    #     indexes = [
-    #         models.Index(fields=['email']),
-    #         models.Index(fields=['username']),
-    #         models.Index(fields=['role']),
-    #         models.Index(fields=['employee_id']),
-    #     ]
 
     def __str__(self):
         return self.email

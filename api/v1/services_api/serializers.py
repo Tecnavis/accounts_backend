@@ -18,8 +18,5 @@ class ServiceSerializer(serializers.ModelSerializer):
         model = Service
         exclude = ['service_type']  
         
-        # fields = ['id', 'name', 'description', 'category', 
-        #           'category_name', 'price','is_active', 
-        #           'country', 'tax_codes', 'gst_type', 'gst_rate', 'gst_amount', 
-        #           'vat_type', 'vat_rate', 'vat_amount','offerPrice', 'total_price']
+    
         

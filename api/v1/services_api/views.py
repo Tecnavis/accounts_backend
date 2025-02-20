@@ -106,45 +106,40 @@ def create_service(request, category_id):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # @permission_classes([IsSecondaryAdmin,IsMainAdmin])
 
-# Update a service under a specific category
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_service(request, category_id, service_id):
     try:
-        category = Category.objects.get(id=category_id)
+        new_category_id = request.data.get("category_id", category_id)  
+        category = Category.objects.get(id=new_category_id)
     except Category.DoesNotExist:
         return Response({'detail': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
 
     try:
-        service = Service.objects.get(id=service_id, category=category)
+        service = Service.objects.get(id=service_id)
     except Service.DoesNotExist:
-        return Response({'detail': 'Service not found in this category'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    data = request.data
-    data['category'] = category.id 
-
-    serializer = ServiceSerializer(service, data=data)
+    updated_data = request.data.copy()
+    updated_data['category'] = category.id 
+    
+    serializer = ServiceSerializer(service, data=updated_data, partial=True)
+    
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['DELETE'])
 @permission_classes([AllowAny])
-def delete_service(request, category_id, service_id):
+def delete_service(request, service_id):
     try:
-        category = Category.objects.get(id=category_id)
-    except Category.DoesNotExist:
-        return Response({'detail': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    try:
-        service = Service.objects.get(id=service_id, category=category)
+        service = Service.objects.get(id=service_id)
+        service.delete()
+        return Response({'detail': 'Service deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Service.DoesNotExist:
-        return Response({'detail': 'Service not found in this category'}, status=status.HTTP_404_NOT_FOUND)
-
-    service.delete()
-    return Response({'detail': 'Service deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'detail': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -63,10 +63,17 @@ class IsMainAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == UserRoles.SUPER_ADMIN
 
+# class IsSecondaryAdmin(BasePermission):
+#     def has_permission(self, request, view):
+#         return request.user.is_authenticated and request.user.role == UserRoles.ADMIN
+
 class IsSecondaryAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == UserRoles.ADMIN
-    
+        return request.user.is_authenticated and str(request.user.role).upper() == str(UserRoles.ADMIN).upper()
+        
 class IsStaff(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == UserRoles.STAFF
+    
+
+    
