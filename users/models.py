@@ -53,6 +53,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     is_active = models.BooleanField(_("Is this user active?"), default=True)
     is_staff = models.BooleanField(_("Is this user staff?"), default=False)
+    is_deleted = models.BooleanField(_("Is this user deleted?"), default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     
     objects = CustomUserManager()

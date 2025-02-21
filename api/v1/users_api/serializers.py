@@ -4,47 +4,34 @@ from rest_framework import serializers
 from users.models import CustomUser
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from rest_framework.exceptions import AuthenticationFailed
 
 
-# class CustomUserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = CustomUser
-#         fields = ['email', 'username','contact_number', 'employee_id',  'is_staff']
-#         extra_kwargs = {'is_staff': {'read_only': True}}
-
-#     def create(self, validated_data):
-#         validated_data['is_staff'] = True  # Ensuring the user is marked as staff
-#         return CustomUser.objects.create_user(**validated_data)
-    
-from rest_framework import serializers
-from django.contrib.auth import get_user_model
-
-CustomUser = get_user_model()  # Ensure you're using the correct User model
+CustomUser = get_user_model() 
 
 class CustomUserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True)  # Add password field
+    # password = serializers.CharField(write_only=True, required=True)  # Add password field
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'username', 'contact_number', 'employee_id', 'is_staff', 'password']
-        extra_kwargs = {'is_staff': {'read_only': True}}
+        fields = ['email', 'username', 'contact_number', 'employee_id', 'is_staff','is_active']
+        extra_kwargs = {'is_staff': {'read_only': True},
+                        
+                        'is_active': {'required': False}
+                        }
 
     def create(self, validated_data):
-        password = validated_data.pop('password', None)  # Extract password
-        validated_data['is_staff'] = True  # Ensure the user is marked as staff
+        password = validated_data.pop('password', None) 
+        validated_data['is_staff'] = True  
+       
         
-        user = CustomUser.objects.create_user(**validated_data)  # Create user
+        user = CustomUser.objects.create_user(**validated_data) 
         
         if password:
-            user.set_password(password)  # Hash password before saving
+            user.set_password(password) 
             user.save()
         
         return user
-
-
 
 
 class LoginSerializer(serializers.Serializer):
@@ -72,7 +59,7 @@ class LoginSerializer(serializers.Serializer):
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id','username','email','role','is_active','is_staff','date_joined']
+        fields = ['id','username','email','role','is_active','is_staff','date_joined','contact_number','employee_id']
         read_only_fields = ['id','date_joined']
 
    
