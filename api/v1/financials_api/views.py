@@ -49,7 +49,7 @@ def create_transaction(request):
    
     data = request.data.copy()
     data["created_by"] = request.user.id
-    transaction_serializer = TransactionSerializer(data=data)  # Make sure you're using the updated data
+    transaction_serializer = TransactionSerializer(data=data)  
    
     if transaction_serializer.is_valid():
         transaction = transaction_serializer.save()

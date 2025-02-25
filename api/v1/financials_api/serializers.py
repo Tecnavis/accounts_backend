@@ -58,6 +58,7 @@ class TransactionSerializer(serializers.ModelSerializer):
             "vat_rate",
             "vat_type",
             "created_by",
+            "discount_amount",
         ]
         read_only_fields = ["transaction_id", "total_service_amount", "total_paid", "remaining_amount", "payment_status",]
 

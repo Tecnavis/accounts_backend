@@ -2,8 +2,7 @@ import datetime
 from django.db import models
 from services.models import Service
 from users.models import CustomUser
-
-
+import decimal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,11 +53,12 @@ class Transaction(models.Model):
     vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15)  
     vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
 
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)  
 
     def save(self, *args, **kwargs):
-
-        logger.info(f"Saving Transaction: vat_type={self.vat_type}")
+        logger.info(f"Saving Transaction: vat_type={self.vat_type}, discount_amount={self.discount_amount}")
         """Auto-generate transaction ID and calculate VAT based on VAT type."""
+       
         if not self.transaction_id:
             today = datetime.date.today()
             date_string = today.strftime('%Y%m%d')
@@ -69,25 +69,32 @@ class Transaction(models.Model):
             self.transaction_id = f'TRN{date_string}{new_sequence}'
 
         base_amount = self.service.total_price * self.quantity
+        # print(f"Base amount: {base_amount}, Discount: {self.discount_amount}")
 
+        if self.discount_amount is None:
+            self.discount_amount = 0
+        
+        discount = decimal.Decimal(str(self.discount_amount))
+    
+        discounted_amount = base_amount - discount
+        # print(f"Discounted amount: {discounted_amount}")
+        
         if self.vat_type == "standard":
-            self.vat_rate = 15 
-        elif self.vat_type == "zero_rated":
-            self.vat_rate = 0   
-        elif self.vat_type == "exempt":
-            self.vat_rate = 0 
+            self.vat_rate = 15
+        elif self.vat_type in ["zero_rated", "exempt"]:
+            self.vat_rate = 0
 
-        if self.vat_type == "exempt":
-            self.vat_amount = 0  
-        else:
-            self.vat_amount = round((self.vat_rate * base_amount) / 100, 2)
+        self.vat_amount = round((self.vat_rate * discounted_amount) / 100, 2)
+        # print(f"VAT amount: {self.vat_amount}")
+        
+        self.total_service_amount = discounted_amount + self.vat_amount
+        # print(f"Total service amount: {self.total_service_amount}")
 
-        self.total_service_amount = base_amount + self.vat_amount
-
-        if not self.pk:  
+        if not self.pk:
             self.remaining_amount = self.total_service_amount
 
         super().save(*args, **kwargs)
+
 
     def update_payment_status(self):
         """Update payment status and remaining amount."""
