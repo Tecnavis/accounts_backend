@@ -17,7 +17,6 @@ import io
 from django.utils.dateparse import parse_date
 
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def transaction_list(request):
@@ -40,9 +39,6 @@ def transaction_detail(request, id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_transaction(request):
-    print(request.data, "requested data")
-    print(request.user.id, "requested user")
-   
     transaction_type = request.data.get("transaction_type")
     if transaction_type not in ["sale", "purchase"]:
         return Response({"detail": "Invalid transaction type."}, status=status.HTTP_400_BAD_REQUEST)
@@ -212,11 +208,8 @@ def calculate_service_amount(request):
 def import_excel(request):
     excel_file = request.FILES["excel_file"]
 
-    try:
-        
-        df = pd.read_excel(io.BytesIO(excel_file.read()))
-        
-        
+    try:       
+        df = pd.read_excel(io.BytesIO(excel_file.read()))               
         column_mapping = {
             
             'Transaction ID': 'transaction_id',
@@ -231,8 +224,7 @@ def import_excel(request):
             'Quantity': 'quantity',
             'Tax Amount': 'vat_amount',
             'VAT Amount': 'vat_amount', 
-            'Remaining Amount': 'remaining_amount',
-            
+            'Remaining Amount': 'remaining_amount',    
         }
         
         for excel_col, code_col in column_mapping.items():
@@ -303,6 +295,7 @@ def import_excel(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = TransactionSerializer(data=transactions_data, many=True)
+       
         if serializer.is_valid():
             instances = serializer.save()
             return Response({
@@ -332,3 +325,123 @@ def import_excel(request):
             "type": type(e).__name__
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_excel_purchase(request):
+    excel_file = request.FILES["excel_file"]
+
+    try:       
+        df = pd.read_excel(io.BytesIO(excel_file.read()))               
+        column_mapping = {
+            'Transaction ID': 'transaction_id',
+            'Username': 'username',
+            'Service': 'service_name',  
+            'Service Name': 'service_name',
+            'Payment Status': 'payment_status',
+            'Purchase Date': 'sale_date',
+            'Sale Date': 'sale_date',
+            'Service Price': 'price', 
+            'Price': 'price',
+            'Quantity': 'quantity',
+            'Tax Amount': 'vat_amount',
+            'VAT Amount': 'vat_amount', 
+            'Remaining Amount': 'remaining_amount',    
+        }
+        
+        for excel_col, code_col in column_mapping.items():
+            if excel_col in df.columns:
+                df.rename(columns={excel_col: code_col}, inplace=True)
+                print(f"Renamed column '{excel_col}' to '{code_col}'")
+           
+        transactions_data = []
+        errors = []
+        skipped_rows = 0
+
+        for index, row in df.iterrows():
+            service_name = row.get("service_name")  
+            if not service_name:
+                errors.append(f"Row {index + 1}: Missing service_name")
+                skipped_rows += 1
+                continue  
+            
+            service = Service.objects.filter(name=service_name).first()
+            if not service:
+                print(f"Row {index + 1}: Service '{service_name}' not found in database")
+                errors.append(f"Row {index + 1}: Service '{service_name}' not found")
+                skipped_rows += 1
+                continue
+
+            sale_date = row.get("sale_date", None)
+            if sale_date:
+                if isinstance(sale_date, str):
+                    try:
+                        sale_date = parse_date(sale_date)
+                    except Exception as e:
+                        print(f"Error parsing sale_date '{sale_date}': {str(e)}")
+                        sale_date = datetime.date.today()
+                elif not isinstance(sale_date, datetime.date):
+                    sale_date = datetime.date.today()
+            else:
+                sale_date = datetime.date.today()
+
+            transaction_data = {
+                "total_service_amount": row.get("price", 0),
+                "remaining_amount": row.get("remaining_amount", 0),
+                "transaction_id": row.get("transaction_id"),
+                "billing_address": row.get("billing_address"),
+                "service": service.id,  
+                "quantity": row.get("quantity", 1),
+                "payment_status": row.get("payment_status", "unpaid"),
+                "transaction_type": "purchase",  
+                "sale_date": sale_date,
+                "remarks": row.get("remarks"),
+                "country": row.get("country", "saudi"),
+                "username": row.get("username"),
+                "email": row.get("email"),
+                "contact_number": row.get("contact_number"),
+                "vat_type": row.get("vat_type", "standard"),
+                "vat_rate": row.get("vat_rate", 15),
+                "vat_amount": row.get("vat_amount", 0),
+            }
+            
+            transactions_data.append(transaction_data)
+        
+        if not transactions_data:
+            return Response({
+                "message": "No valid transactions to import", 
+                "errors": errors[:10] if errors else None,
+                "total_rows": len(df),
+                "skipped_rows": skipped_rows
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = TransactionSerializer(data=transactions_data, many=True)      
+        if serializer.is_valid():
+            
+            instances = serializer.save()
+            return Response({
+                "message": "Transactions imported successfully", 
+                "count": len(instances),
+                "total_rows": len(df),
+                "skipped_rows": skipped_rows,
+                "errors": errors[:10] if errors else None
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Validation errors occurred",
+                "serializer_errors": serializer.errors,
+                "preprocessing_errors": errors[:10] if errors else None,
+                "total_rows": len(df),
+                "valid_rows": len(transactions_data),
+                "skipped_rows": skipped_rows
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        import traceback
+        print(f"Exception during import: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            "error": str(e),
+            "type": type(e).__name__
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

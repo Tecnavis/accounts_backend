@@ -11,6 +11,7 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.admin.views.decorators import staff_member_required as admin_required
 from main.management.commands.create_roles_and_permissions import IsMainAdmin,IsSecondaryAdmin
+from rest_framework.permissions import IsAuthenticated
 
 import logging
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def login_user(request):
     
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_user_profile(request):
     user = request.user
     serializer = UserListSerializer(user)
@@ -125,8 +126,6 @@ def create_staff_user(request):
         )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 @api_view(['POST'])
 @permission_classes([IsMainAdmin])  
@@ -176,24 +175,45 @@ def update_staff_user(request, id):
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(["PUT"])
-@permission_classes([IsMainAdmin,IsSecondaryAdmin])  
-def revoke_staff_user(request, id):
-    
-    staff_user = CustomUser.objects.get(id=id)
-   
-    serializer = CustomUserSerializer(staff_user, data=request.data, partial=True)  # ✅ Allow partial updates
+@api_view(['PUT'])
+@permission_classes([IsMainAdmin])  
+def update_admin_user(request, id):
+    try:
+        staff_user = CustomUser.objects.get(pk=id)
+    except CustomUser.DoesNotExist:
+        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = CustomUserSerializer(staff_user, data=request.data)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["PUT"])
+@permission_classes([IsSecondaryAdmin])  
+def revoke_staff_user(request, id):
     
+    staff_user = CustomUser.objects.get(id=id)   
+    serializer = CustomUserSerializer(staff_user, data=request.data, partial=True)  
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['DELETE'])
-@permission_classes([IsMainAdmin,IsSecondaryAdmin])  
+@permission_classes([IsSecondaryAdmin | IsMainAdmin])  
 def delete_staff_user(request, id):
     staff_user = CustomUser.objects.get(pk=id)
-    staff_user.is_deleted = True
-    staff_user.save()
+    # staff_user.is_deleted = True
+    # staff_user.save()
+    staff_user.delete() 
+    return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsMainAdmin])  
+def delete_admin_user(request, id):
+    staff_user = CustomUser.objects.get(pk=id)
+    staff_user.delete()
     return Response({"message": "User deleted successfully"}, status=status.HTTP_204_NO_CONTENT)

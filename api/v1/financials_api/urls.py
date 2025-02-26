@@ -16,5 +16,6 @@ urlpatterns = [
     path('transactions/<int:transaction_id>/payments/', views.get_transaction_payments, name='transaction-payments'),
  
     path("import-excel/", views.import_excel, name="import-excel"),
+    path("import_excel_purchase/", views.import_excel_purchase, name="import_excel_purchase"),
      
 ]
