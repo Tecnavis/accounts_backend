@@ -10,7 +10,7 @@ class TransactionPaymentSerializer(serializers.ModelSerializer):
             "payment_id",
             "transaction",
             "amount",
-            "payment_date", 
+            "payment_date",
             "payment_mode"
             ]
         read_only_fields = [
@@ -37,10 +37,6 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "transaction_id",
-            "username",
-            "billing_address",
-            "contact_number",
-            "email",
             "service",
             "quantity",
             "total_service_amount",

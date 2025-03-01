@@ -2,9 +2,10 @@ import datetime
 from django.db import models
 from services.models import Service
 from users.models import CustomUser
+from partner.models import PartnerProfile
 import decimal
-import logging
 
+import logging
 logger = logging.getLogger(__name__)
 
 class Transaction(models.Model):
@@ -33,6 +34,7 @@ class Transaction(models.Model):
     )
     
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='transactions_created', blank=True, null=True)
+    partner = models.ForeignKey(PartnerProfile, on_delete=models.CASCADE, related_name='transactions', blank=True, null=True)
     total_service_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     remaining_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)  
     transaction_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
@@ -44,10 +46,6 @@ class Transaction(models.Model):
     sale_date = models.DateField(auto_now_add=True)
     remarks = models.TextField(blank=True, null=True)
     country = models.CharField(max_length=10, choices=COUNTRY_CHOICES, default="saudi")
-
-    username = models.CharField(max_length=50, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    contact_number = models.CharField(max_length=15, blank=True, null=True)
 
     vat_type = models.CharField(max_length=20, choices=VAT_CHOICES)
     vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15)  
@@ -86,7 +84,6 @@ class Transaction(models.Model):
 
         self.vat_amount = round((self.vat_rate * discounted_amount) / 100, 2)
         # print(f"VAT amount: {self.vat_amount}")
-        
         self.total_service_amount = discounted_amount + self.vat_amount
         # print(f"Total service amount: {self.total_service_amount}")
 

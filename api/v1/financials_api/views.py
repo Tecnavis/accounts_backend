@@ -61,32 +61,6 @@ def create_transaction(request):
     return Response(transaction_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# @api_view(['POST'])
-# @permission_classes([AllowAny]) 
-# def create_transaction(request):
-#     print(request.data,"requested data")
-    
-#     # user_id = request.user.id if request.user.is_authenticated else None
-#     # print(user_id, "requested user")
-
-    
-#     transaction_type = request.data.get("transaction_type")
-
-#     if transaction_type not in ["sale", "purchase"]:
-#         return Response({"detail": "Invalid transaction type."}, status=status.HTTP_400_BAD_REQUEST)
-   
-#     data = request.data.copy()
-#     data["created_by"] = request.user.id
-
-#     transaction_serializer = TransactionSerializer(data=request.data)
-   
-#     if transaction_serializer.is_valid():
-#         transaction_serializer.save()
-#         return Response(transaction_serializer.data, status=status.HTTP_201_CREATED)
- 
-#     return Response(transaction_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['PUT'])
 @permission_classes([AllowAny]) 
 def update_transaction(request, transaction_id):
@@ -153,9 +127,9 @@ def create_payment(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny]) 
-def create_transaction_payment(request, id):  # Accepts ID directly
+def create_transaction_payment(request, id):  
     try:
-        transaction = Transaction.objects.get(id=id)  # Lookup by `id` instead of `transaction_id`
+        transaction = Transaction.objects.get(id=id) 
     except Transaction.DoesNotExist:
         return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -445,3 +419,137 @@ def import_excel_purchase(request):
             "error": str(e),
             "type": type(e).__name__
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# import io
+# import logging
+# import pandas as pd
+# from django.db.models import Sum, F
+# from django.db.models.functions import Coalesce
+# from django.shortcuts import get_object_or_404
+# from rest_framework.decorators import api_view, permission_classes
+# from rest_framework.permissions import IsAuthenticated
+# from rest_framework.response import Response
+# from rest_framework import status
+
+# from .models import Transaction, TransactionPayment
+# from .serializers import TransactionSerializer, TransactionPaymentSerializer
+
+# logger = logging.getLogger(__name__)
+
+# # Create a new transaction
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def create_transaction(request):
+#     serializer = TransactionSerializer(data=request.data)
+#     if serializer.is_valid():
+#         transaction = serializer.save()
+#         logger.info(f"Transaction created: {transaction.id}")
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# # Retrieve all transactions
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def list_transactions(request):
+#     transactions = Transaction.objects.all()
+#     serializer = TransactionSerializer(transactions, many=True)
+#     return Response(serializer.data)
+
+# # Retrieve a specific transaction by ID
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def transaction_detail(request, transaction_id):
+#     transaction = get_object_or_404(Transaction, id=transaction_id)
+#     serializer = TransactionSerializer(transaction)
+#     return Response(serializer.data)
+
+# # Update a transaction
+# @api_view(['PUT'])
+# @permission_classes([IsAuthenticated])
+# def update_transaction(request, transaction_id):
+#     transaction = get_object_or_404(Transaction, id=transaction_id)
+#     serializer = TransactionSerializer(transaction, data=request.data, partial=True)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# # Delete a transaction
+# @api_view(['DELETE'])
+# @permission_classes([IsAuthenticated])
+# def delete_transaction(request, transaction_id):
+#     transaction = get_object_or_404(Transaction, id=transaction_id)
+#     transaction.delete()
+#     return Response({"message": "Transaction deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+# # Create a payment for a transaction
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def create_payment(request, transaction_id):
+#     transaction = get_object_or_404(Transaction, id=transaction_id)
+#     serializer = TransactionPaymentSerializer(data=request.data)
+#     if serializer.is_valid():
+#         serializer.save(transaction=transaction)
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# # Retrieve all payments for a transaction
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_transaction_payments(request, transaction_id):
+#     payments = TransactionPayment.objects.filter(transaction__id=transaction_id)
+#     serializer = TransactionPaymentSerializer(payments, many=True)
+#     return Response(serializer.data)
+
+# # Calculate total and remaining service amount
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def calculate_service_amount(request):
+#     transactions = Transaction.objects.annotate(
+#         total_service_amount=F('service__price') * F('quantity'),
+#         remaining_amount=F('service__price') * F('quantity') - Coalesce(F('amount_paid'), 0)
+#     ).values('id', 'total_service_amount', 'remaining_amount')
+
+#     return Response(transactions)
+
+# # Helper function for Excel import
+# def process_excel_import(request, transaction_type):
+#     try:
+#         excel_file = request.FILES["excel_file"]
+#         df = pd.read_excel(io.BytesIO(excel_file.read()))
+
+#         for _, row in df.iterrows():
+#             transaction_data = {
+#                 "customer_name": str(row.get("customer_name", "")).strip(),
+#                 "email": str(row.get("email", "")).strip(),
+#                 "service": str(row.get("service", "")).strip(),
+#                 "quantity": int(row.get("quantity", 1)),
+#                 "price": float(row.get("price", 0)),
+#                 "transaction_type": transaction_type,
+#             }
+#             serializer = TransactionSerializer(data=transaction_data)
+#             if serializer.is_valid():
+#                 serializer.save()
+#             else:
+#                 logger.warning(f"Invalid row: {serializer.errors}")
+
+#         return Response({"message": "Excel data imported successfully"}, status=status.HTTP_201_CREATED)
+
+#     except Exception as e:
+#         logger.error(f"Error processing Excel import: {str(e)}")
+#         return Response({"error": "Failed to process the file"}, status=status.HTTP_400_BAD_REQUEST)
+
+# # Import transactions from an Excel file
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_excel(request):
+#     return process_excel_import(request, "sale")
+
+# # Import purchase transactions from an Excel file
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def import_excel_purchase(request):
+#     return process_excel_import(request, "purchase")
