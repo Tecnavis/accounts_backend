@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from financials.models import Transaction, TransactionPayment
 from users.models import CustomUser
+from api.v1.partner_api.serializers import PartnerProfileSerializer
 
 class TransactionPaymentSerializer(serializers.ModelSerializer):
     """Serializer for payments made for a transaction"""
@@ -22,6 +23,7 @@ class TransactionPaymentSerializer(serializers.ModelSerializer):
         payment = TransactionPayment.objects.create(**validated_data)
         payment.transaction.update_payment_status()
         return payment
+
     
 class TransactionSerializer(serializers.ModelSerializer):
     """Serializer for Transactions with related payments"""
@@ -31,6 +33,8 @@ class TransactionSerializer(serializers.ModelSerializer):
     remaining_amount = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     payments = TransactionPaymentSerializer(many=True, required=False)
     created_by = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), required=False)
+    partner = PartnerProfileSerializer(read_only=True)
+
 
     class Meta:
         model = Transaction
@@ -55,6 +59,9 @@ class TransactionSerializer(serializers.ModelSerializer):
             "vat_type",
             "created_by",
             "discount_amount",
+            "billing_address",
+            "partner",
+            
         ]
         read_only_fields = ["transaction_id", "total_service_amount", "total_paid", "remaining_amount", "payment_status",]
 
