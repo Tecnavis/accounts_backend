@@ -39,6 +39,7 @@ def transaction_detail(request, id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_transaction(request):
+    print(request.data)
     transaction_type = request.data.get("transaction_type")
     if transaction_type not in ["sale", "purchase"]:
         return Response({"detail": "Invalid transaction type."}, status=status.HTTP_400_BAD_REQUEST)

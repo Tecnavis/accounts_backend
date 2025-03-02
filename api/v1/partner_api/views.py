@@ -16,18 +16,31 @@ def create_partner(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def list_partner(request):
+    partner_type = request.GET.get("partner_type")
+
+    if partner_type in ["customer", "vendor"]:
+        partners = PartnerProfile.objects.filter(partner_type=partner_type)
+    else:
+        partners = PartnerProfile.objects.all()
+
+    serializer = PartnerProfileSerializer(partners, many=True)
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def list_partners(request):
-    partners = PartnerProfile.objects.all()
-    paginator = Paginator(partners, 10)  
+    partner_type = request.GET.get("partner_type")
+    if partner_type in ["customer", "vendor"]:
+        partners = PartnerProfile.objects.filter(partner_type=partner_type)
+    else:
+        partners = PartnerProfile.objects.all()
+    paginator = Paginator(partners, 20)  
     page = request.GET.get("page", 1)
-    
-    try:
-        partners_page = paginator.page(page)
-    except:
-        return Response({"error": "Invalid page number"}, status=status.HTTP_400_BAD_REQUEST)
+    partners_page = paginator.page(page)
 
     serializer = PartnerProfileSerializer(partners_page, many=True)
     return Response({
@@ -36,7 +49,6 @@ def list_partners(request):
         "current_page": int(page),
         "results": serializer.data
     }, status=status.HTTP_200_OK)
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
