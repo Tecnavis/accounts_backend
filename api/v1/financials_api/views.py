@@ -46,19 +46,19 @@ def create_transaction(request):
    
     data = request.data.copy()
     data["created_by"] = request.user.id
-    transaction_serializer = TransactionSerializer(data=data)  
+    data["partner_id"] = request.data.get("partner")
+    transaction_serializer = TransactionSerializer(data=data) 
    
     if transaction_serializer.is_valid():
+        print("Validated Data:", transaction_serializer.validated_data)  
         transaction = transaction_serializer.save()
         print(f"Transaction saved with ID: {transaction.id}")
-        # Verify it exists in the database
         try:
             db_check = Transaction.objects.get(id=transaction.id)
             print(f"Verified transaction exists in DB: {db_check.id}")
         except Transaction.DoesNotExist:
             print("ERROR: Transaction not found in database after save!")
         return Response(transaction_serializer.data, status=status.HTTP_201_CREATED)
- 
     return Response(transaction_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
