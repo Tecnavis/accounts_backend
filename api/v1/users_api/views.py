@@ -91,6 +91,7 @@ def login_user(request):
 @permission_classes([IsAuthenticated])
 def get_user_profile(request):
     user = request.user
+    print(user,"user")
     serializer = UserListSerializer(user)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -162,7 +163,7 @@ def list_staff_users(request):
 
 # update staff user
 @api_view(['PUT'])
-@permission_classes([IsSecondaryAdmin])  
+@permission_classes([IsSecondaryAdmin | IsMainAdmin])  
 def update_staff_user(request, id):
     try:
         staff_user = CustomUser.objects.get(pk=id)
@@ -184,17 +185,6 @@ def update_admin_user(request, id):
         return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     serializer = CustomUserSerializer(staff_user, data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(["PUT"])
-@permission_classes([IsSecondaryAdmin])  
-def revoke_staff_user(request, id):
-    
-    staff_user = CustomUser.objects.get(id=id)   
-    serializer = CustomUserSerializer(staff_user, data=request.data, partial=True)  
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)

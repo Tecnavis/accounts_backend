@@ -7,11 +7,15 @@ class UserRoles:
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     STAFF = "staff"
+    CUSTOMER = "customer" 
+    VENDOR = "vendor" 
 
     CHOICES = [
         (SUPER_ADMIN, "Super Admin"),
         (ADMIN, "Admin"),
         (STAFF, "Staff"),
+        (CUSTOMER, "Customer"),
+        (VENDOR, "Vendor"),
     ]    
 
 
