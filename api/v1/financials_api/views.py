@@ -15,6 +15,7 @@ import pandas as pd
 import datetime
 import io
 from django.utils.dateparse import parse_date
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 @api_view(['GET'])
@@ -431,12 +432,45 @@ def create_expense(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def expense_list(request):
+#     expenses = Expense.objects.all()
+#     paginator = Paginator(expenses, 20)  
+#     page = request.GET.get("page", 1)
+#     partners_page = paginator.page(page)
+#     serializer = ExpenseSerializer(expenses, many=True)
+#     # return Response(serializer.data)
+#     return Response({
+#         "count": paginator.count,
+#         "total_pages": paginator.num_pages,
+#         "current_page": int(page),
+#         "results": serializer.data
+#     }, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def expense_list(request):
-    expenses = Expense.objects.all()
-    serializer = ExpenseSerializer(expenses, many=True)
-    return Response(serializer.data)
+    expenses = Expense.objects.all().order_by("-date")  # Order by latest date
+
+    paginator = Paginator(expenses, 20)  # 20 items per page
+    page = request.GET.get("page", 1)
+
+    try:
+        expenses_page = paginator.page(page)
+    except PageNotAnInteger:
+        return Response({"error": "Invalid page number"}, status=status.HTTP_400_BAD_REQUEST)
+    except EmptyPage:
+        return Response({"error": "Page number out of range"}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = ExpenseSerializer(expenses_page, many=True)  # Pass paginated queryset
+
+    return Response({
+        "count": paginator.count,
+        "total_pages": paginator.num_pages,
+        "current_page": int(page),
+        "results": serializer.data
+    }, status=status.HTTP_200_OK)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
