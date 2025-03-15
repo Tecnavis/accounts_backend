@@ -17,5 +17,10 @@ urlpatterns = [
  
     path("import-excel/", views.import_excel, name="import-excel"),
     path("import_excel_purchase/", views.import_excel_purchase, name="import_excel_purchase"),
+
+    path("expenses/", views.expense_list, name="expense_list"),
+    path("expenses/create/", views.create_expense, name="create_expense"),
+    path("expenses/<int:id>/update/", views.update_expense, name="update_expense"),
+    path("expenses/<int:id>/delete/", views.delete_expense, name="delete_expense"),
      
 ]

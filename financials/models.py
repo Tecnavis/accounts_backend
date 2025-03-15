@@ -137,3 +137,16 @@ class TransactionPayment(models.Model):
 
         super().save(*args, **kwargs)
         self.transaction.update_payment_status()
+
+class Expense(models.Model):
+    title = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    date = models.DateField()
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='expenses_created', blank=True, null=True)
+
+    def __str__(self):
+        
+        return f"{self.title} - {self.amount}"

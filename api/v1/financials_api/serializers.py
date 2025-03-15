@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from financials.models import Transaction, TransactionPayment
+from financials.models import Transaction, TransactionPayment,Expense
 from users.models import CustomUser
 from partner.models import PartnerProfile
 from api.v1.partner_api.serializers import PartnerProfileSerializer
@@ -85,5 +85,10 @@ class TransactionSerializer(serializers.ModelSerializer):
         return transaction
     
     
-
+class ExpenseSerializer(serializers.ModelSerializer):
+    date = serializers.DateField(format="%d/%m/%Y", input_formats=["%d/%m/%Y", "%Y-%m-%d"])
+    class Meta:
+        model = Expense
+        fields = "__all__"
+        read_only_fields = ["user", "created_at"]
 
